@@ -5,6 +5,11 @@ import { LESSONS, MODULES, cardsOf } from '../content/index.js'
 
 export const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY)
 
+// Latest access token, readable synchronously: a page that is closing can't await getSession()
+let accessToken = null
+supabase.auth.getSession().then(({ data }) => { accessToken = data.session?.access_token || null })
+supabase.auth.onAuthStateChange((_e, s) => { accessToken = s?.access_token || null })
+
 // PostgREST caps responses at 1000 rows — page through
 async function all(table, col, uid) {
   let out = []
@@ -42,6 +47,11 @@ export function derive(d, today = ymd()) {
   const theorySec = d.days.reduce((s, r) => s + r.theory_sec, 0)
   const freeSec = d.days.reduce((s, r) => s + r.free_sec, 0)
 
+  // A lesson counts as learned when she finished it or sealed its module (test-out). Supplementary content unlocks on this.
+  const learned = new Set([...completed, ...MODULES.filter(m => passed.has(m.id)).flatMap(m => m.lessons.map(l => l.id))])
+  const isLearned = id => !id || learned.has(id)
+  const knownTopics = LESSONS.filter(l => !l.story && learned.has(l.id)).map(l => l.topic).join('; ')
+
   const moduleOpen = m => m.n === 1 || passed.has(MODULES[m.n - 2].id)
   const lessonOpen = l => {
     const m = MODULES.find(x => x.id === l.moduleId)
@@ -56,7 +66,7 @@ export function derive(d, today = ymd()) {
   const ctx = { streak, xp, passed, completed, answers, correct, bestCombo, theorySec, freeSec, cardsCount: Object.keys(d.cards).length,
     reviews: d.daily.filter(r => r.context === 'review').reduce((s, r) => s + r.n, 0), hours: d.hours, writings: d.writings.length }
   return {
-    ...ctx, level: level(xp), moduleOpen, lessonOpen, nextLesson, currentModule, due,
+    ...ctx, learned, isLearned, learnedCount: learned.size, knownTopics, level: level(xp), moduleOpen, lessonOpen, nextLesson, currentModule, due,
     accuracy: answers ? correct / answers : 0,
     achievements: ACHIEVEMENTS.map(a => ({ ...a, got: a.test(ctx) })),
   }
@@ -154,7 +164,7 @@ export function StoreProvider({ session, children }) {
     upsertDay(row) { setData(d => ({ ...d, days: [...d.days.filter(x => x.day !== row.day), row] })) },
   }), [data, uid])
 
-  if (error) return <div className="main"><div className="card">Couldn’t load your notebook: {error}</div></div>
+  if (error) return <div className="main"><div className="card">No pude cargar tu cuaderno: {error}</div></div>
   if (!data) return <Splash />
   return (
     <DataCtx.Provider value={{ ...data, ...view, ...actions, uid, today, reload, notify, session }}>
@@ -164,9 +174,12 @@ export function StoreProvider({ session, children }) {
   )
 }
 
+// before the data is here: Spanish until she has learned a few lessons (remembered from last time)
+const splashText = () => { try { return +localStorage.getItem('learned') >= 10 ? 'opening your notebook' : 'abriendo tu cuaderno' } catch { return 'abriendo tu cuaderno' } }
+
 export function Splash() {
   return <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
-    <div className="center stack-s"><div className="seal" style={{ margin: '0 auto', animation: 'pulse 1.4s infinite' }}>M</div><span className="eyebrow">opening your notebook</span></div>
+    <div className="center stack-s"><div className="seal" style={{ margin: '0 auto', animation: 'pulse 1.4s infinite' }}>M</div><span className="eyebrow">{splashText()}</span></div>
   </div>
 }
 
@@ -202,6 +215,21 @@ function TimerProvider({ data, upsertDay, children }) {
     upsertDay(saved)
   }, [upsertDay])
 
+  // Last-second save while the tab is hiding or closing: `keepalive` lets the request outlive the page
+  const flushOnExit = useCallback(() => {
+    const p = pending.current
+    const t = Math.floor(p.theory), f = Math.floor(p.free)
+    if (!t && !f && !p.log.length) return
+    if (!accessToken) return flush()
+    pending.current = { theory: p.theory - t, free: p.free - f, log: [] }
+    const restore = () => { pending.current.theory += t; pending.current.free += f; pending.current.log.push(...p.log) }
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/add_study_time`, {
+      method: 'POST', keepalive: true,
+      headers: { 'content-type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ p_day: rowRef.current.day, p_theory: t, p_free: f, p_target: rowRef.current.theory_target, p_log: p.log }),
+    }).then(r => { if (!r.ok) restore() }).catch(restore)
+  }, [flush])
+
   useEffect(() => {
     const tick = () => {
       const now = Date.now(), delta = (now - last.current) / 1000
@@ -216,11 +244,12 @@ function TimerProvider({ data, upsertDay, children }) {
     }
     const id = setInterval(tick, 1000)
     const save = setInterval(() => flush(), 15000)
-    const onVis = () => { if (document.hidden) flush(); else if (modeRef.current === 'theory') last.current = Date.now() }
+    const onVis = () => { if (document.hidden) flushOnExit(); else if (modeRef.current === 'theory') last.current = Date.now() }
+    const onHide = () => flushOnExit()
     document.addEventListener('visibilitychange', onVis)
-    window.addEventListener('pagehide', () => flush())
-    return () => { clearInterval(id); clearInterval(save); document.removeEventListener('visibilitychange', onVis) }
-  }, [flush])
+    window.addEventListener('pagehide', onHide)
+    return () => { clearInterval(id); clearInterval(save); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pagehide', onHide) }
+  }, [flush, flushOnExit])
 
   const setMode = useCallback(m => {
     if (m === null && theoryHolders.current > 0) m = 'theory' // pausing free inside a lesson hands time back to theory

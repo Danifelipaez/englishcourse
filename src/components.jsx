@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti'
 import { Volume2 } from 'lucide-react'
 import { speak } from './lib/speech.js'
 import { addDays, ymd } from './lib/logic.js'
+import { useT } from './lib/i18n.jsx'
 
 export const fmt = sec => {
   const s = Math.floor(sec), m = Math.floor(s / 60)
@@ -26,6 +27,7 @@ export function SpeakBtn({ text, label = 'Listen', rate }) {
 export function GoalRing({ theory, free, target, size = 132 }) {
   const r1 = size / 2 - 8, r2 = size / 2 - 22, c1 = 2 * Math.PI * r1, c2 = 2 * Math.PI * r2
   const p1 = Math.min(1, theory / (target * 60)), p2 = Math.min(1, (theory + free) / 1200)
+  const { t } = useT()
   return (
     <div className="ring" style={{ width: size, height: size }}>
       <svg width={size} height={size} aria-hidden="true">
@@ -34,7 +36,7 @@ export function GoalRing({ theory, free, target, size = 132 }) {
         <circle cx={size / 2} cy={size / 2} r={r2} stroke="var(--sage-soft)" strokeWidth="8" />
         <circle cx={size / 2} cy={size / 2} r={r2} stroke="var(--sage)" strokeWidth="8" strokeDasharray={c2} strokeDashoffset={c2 * (1 - p2)} />
       </svg>
-      <div className="label"><div><b>{mins(theory + free)}</b><span className="small muted">of 20 min</span></div></div>
+      <div className="label"><div><b>{mins(theory + free)}</b><span className="small muted">{t('ring.of')}</span></div></div>
     </div>
   )
 }
@@ -46,15 +48,16 @@ export function Candle({ lit = true }) {
 // Pressed flowers for the last 7 days
 export function Week({ metDays, frozenDays, today }) {
   const met = new Set(metDays), frozen = new Set(frozenDays)
+  const { t, locale } = useT()
   return (
-    <div className="week" aria-label="This week">
+    <div className="week" aria-label={t('week.aria')}>
       {Array.from({ length: 7 }, (_, i) => addDays(today, i - 6)).map((d, i) => (
         <div className="d" key={d}>
           <span className={`bloom ${met.has(d) ? 'met' : ''} ${frozen.has(d) ? 'frozen' : ''} ${d === today ? 'today' : ''}`} style={{ animationDelay: `${i * 60}ms` }}
-            title={met.has(d) ? 'Goal met' : frozen.has(d) ? 'Protected by a bookmark' : ''}>
+            title={met.has(d) ? t('week.met') : frozen.has(d) ? t('week.frozen') : ''}>
             {met.has(d) ? '🌸' : frozen.has(d) ? '🔖' : ''}
           </span>
-          {new Date(d + 'T12:00').toLocaleDateString('en-US', { weekday: 'narrow' })}
+          {new Date(d + 'T12:00').toLocaleDateString(locale, { weekday: 'narrow' })}
         </div>
       ))}
     </div>
@@ -66,6 +69,7 @@ export function Week({ metDays, frozenDays, today }) {
  * New words ink in, removed words fade out. Shows *how* grammar moves.
  */
 export function Morph({ from, to }) {
+  const { t } = useT()
   const [phase, setPhase] = useState(0) // 0 = from, 1 = to
   const box = useRef(null), rects = useRef({})
   const tokens = s => {
@@ -94,7 +98,7 @@ export function Morph({ from, to }) {
         {shown.map(t => <span key={t.key} data-k={t.key} className={phase && !fromKeys.has(t.key) ? 'new' : ''}>{t.w}</span>)}
       </div>
       <div className="row">
-        <button className="btn ghost sm" onClick={() => { measure(); setPhase(p => 1 - p) }}>{phase ? '↺ Show before' : 'Transform →'}</button>
+        <button className="btn ghost sm" onClick={() => { measure(); setPhase(p => 1 - p) }}>{phase ? t('morph.back') : t('morph.go')}</button>
         <SpeakBtn text={phase ? to : from} />
       </div>
     </div>
@@ -111,6 +115,6 @@ export function Bar({ value, tone = '' }) {
 }
 
 export const levelClass = l => (l.startsWith('B') ? 'b1' : l.startsWith('A2') ? 'a2' : '')
-export const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
-export const todayLabel = () => new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+export const greeting = t => { const h = new Date().getHours(); return t(h < 12 ? 'greet.morning' : h < 18 ? 'greet.afternoon' : 'greet.evening') }
+export const todayLabel = locale => new Date().toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })
 export { ymd }

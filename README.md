@@ -44,3 +44,21 @@ npm run dev
 - Racha: cada 7 días gana un protector (máx. 2) que salva un día perdido. El admin puede restaurar días o regalar protectores.
 - Puntos: 10 por respuesta × multiplicador de combo (×1 → ×5 cada 3 seguidas) + 50 por día cumplido + 20 por lección + 150 por examen aprobado.
 - Exámenes: 70 % para sellar el módulo y abrir el siguiente; se pueden presentar antes para saltar un módulo.
+
+## Idioma de la app (español → inglés)
+
+La interfaz arranca en español y se va pasando a inglés a medida que ella aprende. Cada texto de `src/lib/strings.js` es `[español, English, nivel]`; un nivel se abre cuando ha *aprendido* cierto número de lecciones (`TIER` en `src/lib/i18n-core.js`: 3, 6, 10, 20, 32, 45). Las palabras sueltas cambian primero; las explicaciones largas, al final. Una lección cuenta como aprendida si la terminó o si selló su módulo con el examen. En **Yo → Idioma** se puede forzar todo en español o todo en inglés.
+
+Los textos de apoyo de cada lección (`intro`, `goal`, `subtitle`) tienen versión en español en `src/content/es.js` y pasan a inglés cuando ya va 12 lecciones más adelante.
+
+## Contenido complementario bloqueado
+
+Pinturas, poemas, recomendaciones de inglés libre, consignas de escritura, consejos y el Estudio solo se abren cuando ella ya vio la gramática que necesitan: cada elemento de `src/content/library.js` tiene `needs: 'm3l3'` (la lección que lo habilita). Mientras tanto aparece bloqueado, diciendo qué lección lo abre. El tutor IA recibe la lista de temas ya estudiados (`known`) para no pasarse de su nivel.
+
+## Sesiones interrumpidas
+
+Si sale de una lección, repaso o examen a medias, el avance se guarda en `localStorage` (`src/lib/drafts.js`) después de cada respuesta: pregunta actual, racha, puntos y las preguntas que van a repetirse. Al volver, la lección/examen/repaso ofrece *Continuar donde lo dejé* y *Hoy* muestra la sesión pendiente. El tiempo de estudio también se guarda al cerrar o esconder la pestaña (`keepalive`).
+
+## Explicaciones resaltadas
+
+En el contenido, `**así**` marca el término clave: negrita en color vino con trazo de marcador dorado. El texto de ayuda en español va en un panel aparte con etiqueta, la regla en inglés es la línea principal y las trampas ("Ojo") tienen su propio recuadro. En las respuestas, lo que sigue a una flecha (`→ is`) se resalta solo.
