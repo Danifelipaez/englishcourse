@@ -3,17 +3,20 @@ import { ArrowLeft, Lock, Check, BookOpen, Mail } from 'lucide-react'
 import { MODULES, MODULE, LESSONS, LESSON } from '../content/index.js'
 import { useData } from '../lib/store.jsx'
 import { Bar, levelClass } from '../components.jsx'
+import { useT } from '../lib/i18n.jsx'
+import { MODULE_ES } from '../content/es.js'
 
 export function Path({ go }) {
   const { moduleOpen, completed, passed, exams } = useData()
+  const { t, pick } = useT()
   const [view, setView] = useState('list')
   return (
     <div className="stack">
-      <div><span className="eyebrow">Your path · A1 → B1</span><h1>The cabinet</h1>
-        <p className="muted">Twelve drawers, one story. Pass each module’s exam to open the next one — or test out early if you already know it.</p></div>
+      <div><span className="eyebrow">{t('path.eyebrow')}</span><h1>{t('path.h')}</h1>
+        <p className="muted">{t('path.intro')}</p></div>
       <div className="seg" role="tablist">
-        <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>Modules</button>
-        <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Thread map</button>
+        <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>{t('path.modules')}</button>
+        <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>{t('path.map')}</button>
       </div>
       {view === 'map' ? <ThreadMap go={go} completed={completed} /> : MODULES.map((m, i) => {
         const open = moduleOpen(m)
@@ -26,9 +29,9 @@ export function Path({ go }) {
               <div className="grow stack-s">
                 <div className="row between"><span className={`level-tag ${levelClass(m.level)}`}>{m.level}</span>{!open && <Lock size={16} className="muted" />}</div>
                 <h3>{m.title}</h3>
-                <span className="small muted">{m.subtitle}</span>
+                <span className="small muted">{pick(m.subtitle, MODULE_ES[m.id]?.subtitle, m.lessons[0].id)}</span>
                 <Bar value={done / m.lessons.length} />
-                <span className="small muted">{done}/{m.lessons.length} lessons{best ? ` · exam best ${best}%` : ''}</span>
+                <span className="small muted">{t('path.lessons', { done, n: m.lessons.length })}{best ? ` · ${t('path.examBest', { n: best })}` : ''}</span>
               </div>
             </div>
           </button>
@@ -41,13 +44,14 @@ export function Path({ go }) {
 export function Module({ id, go }) {
   const m = MODULE[id]
   const { lessonOpen, completed, progress, exams, passed } = useData()
+  const { t, pick } = useT()
   const best = Math.max(0, ...exams.filter(e => e.module_id === m.id).map(e => e.score))
   const allDone = m.lessons.every(l => completed.has(l.id))
   return (
     <div className="stack">
-      <div className="row"><button className="icon-btn" onClick={() => go('path')} aria-label="Back"><ArrowLeft /></button>
-        <div className="grow"><span className="eyebrow">Module {m.n} · {m.level}</span><h2>{m.title}</h2></div></div>
-      <p className="muted">{m.goal}</p>
+      <div className="row"><button className="icon-btn" onClick={() => go('path')} aria-label={t('common.back')}><ArrowLeft /></button>
+        <div className="grow"><span className="eyebrow">{t('module.eyebrow', { n: m.n, level: m.level })}</span><h2>{m.title}</h2></div></div>
+      <p className="muted">{pick(m.goal, MODULE_ES[m.id]?.goal, m.lessons[0].id)}</p>
       <div className="thread">
         {m.lessons.map((l, i) => {
           const open = lessonOpen(l), done = completed.has(l.id)
@@ -58,7 +62,7 @@ export function Module({ id, go }) {
               <button className={`card link ${open ? '' : 'locked'}`} style={{ textAlign: 'left', width: '100%' }} onClick={() => go(`lesson/${l.id}`)} disabled={!open}>
                 <div className="row">
                   <div className="grow">
-                    <span className="eyebrow">{l.story ? <><Mail size={11} style={{ verticalAlign: -1 }} /> Story chapter</> : `Lesson ${l.n}`}</span>
+                    <span className="eyebrow">{l.story ? <><Mail size={11} style={{ verticalAlign: -1 }} /> {t('lesson.story')}</> : t('lesson.label', { n: l.n })}</span>
                     <h3 style={{ fontSize: 20, marginTop: 4 }}>{l.title}</h3>
                     <span className="small muted">{l.topic}</span>
                   </div>
@@ -73,9 +77,9 @@ export function Module({ id, go }) {
           <button className="card link" style={{ textAlign: 'left', width: '100%', background: 'var(--cream)' }} onClick={() => go(`exam/${m.id}`)}>
             <div className="row">
               <div className="seal sm">{passed.has(m.id) ? <Check size={16} /> : 'E'}</div>
-              <div className="grow"><span className="eyebrow">Module exam · pass with 70%</span>
-                <h3 style={{ fontSize: 20, marginTop: 4 }}>{passed.has(m.id) ? 'Sealed ✓' : allDone ? 'You’re ready' : 'Test out early'}</h3>
-                <span className="small muted">{best ? `Best: ${best}%` : `${m.examItems.length + 5} questions, no hints`}</span></div>
+              <div className="grow"><span className="eyebrow">{t('module.examEyebrow')}</span>
+                <h3 style={{ fontSize: 20, marginTop: 4 }}>{passed.has(m.id) ? t('module.sealed') : allDone ? t('module.ready') : t('module.early')}</h3>
+                <span className="small muted">{best ? t('module.best', { n: best }) : t('module.questions', { n: m.examItems.length + 5 })}</span></div>
             </div>
           </button>
         </div>
@@ -86,6 +90,7 @@ export function Module({ id, go }) {
 
 // 60 lessons as a constellation; threads show how lessons feed each other
 function ThreadMap({ go, completed }) {
+  const { t } = useT()
   const [sel, setSel] = useState(null)
   const W = 340, pos = {}
   MODULES.forEach((m, mi) => m.lessons.forEach((l, li) => { pos[l.id] = [36 + li * 67, 30 + mi * 54] }))
@@ -94,8 +99,8 @@ function ThreadMap({ go, completed }) {
   const active = sel ? new Set([sel, ...LESSON[sel].links, ...LESSONS.filter(l => l.links.includes(sel)).map(l => l.id)]) : null
   return (
     <div className="card" style={{ padding: 12 }}>
-      <p className="small muted" style={{ margin: '4px 8px 8px' }}>Each dot is a lesson; each line, an idea that comes back. Tap a dot to see its threads, tap again to open it.</p>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Map of linked lessons">
+      <p className="small muted" style={{ margin: '4px 8px 8px' }}>{t('map.help')}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={t('map.aria')}>
         {MODULES.map((m, mi) => <text key={m.id} x="4" y={34 + mi * 54} fontSize="9" fill="var(--ink-3)" fontFamily="Jost">{mi + 1}</text>)}
         {edges.map(([a, b], i) => {
           const [x1, y1] = pos[a], [x2, y2] = pos[b]
@@ -116,8 +121,8 @@ function ThreadMap({ go, completed }) {
         })}
       </svg>
       {sel && <div className="row between" style={{ padding: '8px' }}>
-        <div><span className="eyebrow">Lesson {LESSON[sel].n}</span><div className="serif" style={{ fontSize: 20 }}>{LESSON[sel].title}</div></div>
-        <button className="btn sm" onClick={() => go(`lesson/${sel}`)}>Open</button>
+        <div><span className="eyebrow">{t('lesson.label', { n: LESSON[sel].n })}</span><div className="serif" style={{ fontSize: 20 }}>{LESSON[sel].title}</div></div>
+        <button className="btn sm" onClick={() => go(`lesson/${sel}`)}>{t('common.open')}</button>
       </div>}
     </div>
   )
