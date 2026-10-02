@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <defs><radialGradient id="w" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#c35b6a"/><stop offset=".55" stop-color="#973a49"/><stop offset="1" stop-color="#6d2533"/></radialGradient></defs>
+  <circle cx="256" cy="256" r="168" fill="url(#w)"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="5" stroke-dasharray="14 10"/>
+  <text x="256" y="300" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="150" fill="#fff" fill-opacity=".92">M</text>
+</svg>
