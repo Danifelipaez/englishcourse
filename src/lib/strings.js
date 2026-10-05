@@ -387,4 +387,10 @@ export const STR = {
   'auth.toUp': ['¿Primera vez? Crea una cuenta', 'First time? Create an account', 4],
   'auth.toIn': ['Ya tengo cuenta', 'I already have an account', 4],
   'auth.check': ['Revisa tu correo para confirmar tu cuenta 💌', 'Check your email to confirm your account 💌', 5],
+  'auth.unconfirmed': ['Todavía no has confirmado tu correo. Abre el enlace que te enviamos, o pide uno nuevo.', 'You have not confirmed your email yet. Open the link we sent you, or ask for a new one.', 5],
+  'auth.resend': ['Reenviar correo de confirmación', 'Resend confirmation email', 5],
+  'auth.resendIn': ['Reenviar en {n} s', 'Resend in {n} s', 4],
+  'auth.resent': ['Listo, te enviamos otro correo 💌', 'Done, we sent you another email 💌', 5],
+  'auth.needEmail': ['Escribe tu correo arriba.', 'Type your email above.', 4],
+  'auth.expired': ['Ese enlace ya venció o ya se usó. Pide uno nuevo.', 'That link has expired or was already used. Ask for a new one.', 5],
 }

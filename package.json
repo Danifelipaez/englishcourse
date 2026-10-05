@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node src/lib/selfcheck.test.js",
-    "db": "node --env-file=.env.local scripts/migrate.js"
+    "db": "node --env-file=.env.local scripts/migrate.js",
+    "confirm-user": "node --env-file=.env.local scripts/confirm-user.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

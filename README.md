@@ -23,6 +23,12 @@ Stack: Vite + React · Supabase (auth + Postgres con RLS) · una función server
 - El esquema ya está aplicado. Para re-aplicarlo (es idempotente): `npm run db` (usa `DATABASE_URL` de `.env.local`).
 - **Authentication → URL Configuration**: pon la URL de Vercel en *Site URL* (para el correo de confirmación).
 - Opcional: **Authentication → Sign In / Providers → Email** desactiva *Confirm email* si no quieren confirmar por correo.
+- La app ya maneja la verificación: al registrarse muestra el aviso con botón *Reenviar correo*, y si alguien intenta entrar sin confirmar le ofrece reenviarlo. Añade la URL de la app en **Authentication → URL Configuration → Redirect URLs** para que el enlace del correo vuelva a ella.
+- **Confirmar a mano a un usuario** (p. ej. si el correo no llega): `npm run confirm-user -- correo@ejemplo.com`, o en el SQL Editor:
+
+```sql
+update auth.users set email_confirmed_at = now() where email = 'CORREO' and email_confirmed_at is null;
+```
 - **Hacerte admin**: crea tu cuenta en la app y luego, en el SQL Editor:
 
 ```sql
