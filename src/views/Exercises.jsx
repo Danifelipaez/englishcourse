@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Mic, Volume2, X, Turtle, Check, Sparkles } from 'lucide-react'
 import { accepts, normalize, shuffle, similarity, multiplier, BASE_POINTS } from '../lib/logic.js'
 import { speak, listen, canListen } from '../lib/speech.js'
+import { playCorrect, playWrong } from '../lib/sfx.js'
 import { useData } from '../lib/store.jsx'
 import { ask, levelOf } from '../lib/tutor.js'
 import { Sheet, SpeakBtn } from '../components.jsx'
@@ -239,6 +240,7 @@ export function Runner({ items, context, onFinish, onExit, exam = false, readTex
   const onAnswer = (correct, given) => {
     const c = exam ? 0 : correct ? combo + 1 : 0
     const pts = exam || !correct ? 0 : BASE_POINTS * multiplier(c) * (retry ? 0.5 : 1)
+    if (!exam) (correct ? playCorrect : playWrong)()
     setCombo(c)
     setAnswered({ correct })
     const s = stats.current
@@ -258,6 +260,8 @@ export function Runner({ items, context, onFinish, onExit, exam = false, readTex
     if (i + 1 >= queue.length) finish()
     else setI(n => n + 1)
   }
+  // each new question starts at the top, so the prompt is never hidden above the fold
+  useEffect(() => { scrollTo(0, 0) }, [i])
   // she left right after the last answer: the run was already complete
   useEffect(() => { if (resume && !ex) finish() }, [])
   useEffect(() => {
